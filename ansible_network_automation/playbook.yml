@@ -1,0 +1,78 @@
+---
+- name: Manage Network Device Configurations and Backups
+  hosts: all # Target all hosts defined in the inventory
+  gather_facts: false # Network modules usually gather their own facts or don't need them in the same way as OS facts
+  connection: ansible.netcommon.network_cli # Default connection method, can be overridden per OS or host
+
+  vars:
+    backup_dir: "./network_backups" # Define where backups will be stored
+    build_dir: "./build" # Define where temporary config files are stored
+    ansible_user: your_ssh_user # Replace with your SSH username
+    ansible_password: your_ssh_password # Replace with your SSH password or use vault
+    # ansible_ssh_private_key_file: /path/to/your/ssh/key # Alternative for key-based auth
+    ansible_network_os_mappings:
+      cisco: cisco.ios.ios
+      juniper: junipernetworks.junos.junos
+      # Add other mappings as needed:
+      # arista: arista.eos.eos
+      # vyos: vyos.vyos.vyos
+
+  pre_tasks:
+    - name: Set network OS based on inventory group or variable
+      ansible.builtin.set_fact:
+        ansible_network_os: "{{ ansible_network_os_mappings[inventory_group_names[0]] | default(ansible_network_os_mappings['cisco']) }}"
+      # This is a simple way to set ansible_network_os if you group hosts by vendor in inventory.
+      # Example: [cisco_routers], [juniper_switches]
+      # More robust methods might involve host_vars or group_vars.
+      # Ensure 'ansible_network_os' is correctly set for each device type.
+
+    - name: Create build directory
+      ansible.builtin.file:
+        path: "{{ build_dir }}"
+        state: directory
+      delegate_to: localhost
+      run_once: true
+
+  roles:
+    - role: configure_device
+      when: manage_config | default(true) # Run this role if 'manage_config' is true (default)
+    - role: backup_device
+      when: manage_backup | default(true) # Run this role if 'manage_backup' is true (default)
+
+# Example of how to run this playbook:
+# ansible-playbook -i inventory.ini playbook.yml
+#
+# To only run backup:
+# ansible-playbook -i inventory.ini playbook.yml --tags backup --extra-vars "manage_config=false"
+#
+# To only run configuration:
+# ansible-playbook -i inventory.ini playbook.yml --tags configure --extra-vars "manage_backup=false"
+
+# Note on ansible_network_os:
+# The `ansible_network_os` variable is crucial. It tells Ansible which collection of network modules to use.
+# You can set this in multiple ways:
+# 1. In `group_vars` for a group of similar devices (e.g., group_vars/cisco_routers.yml).
+#    ```yaml
+#    ansible_network_os: cisco.ios.ios
+#    ansible_connection: ansible.netcommon.network_cli
+#    ansible_become: true # If enable mode is needed
+#    ansible_become_method: enable
+#    ```
+# 2. In `host_vars` for a specific device (e.g., host_vars/router1.example.com.yml).
+# 3. Directly in the inventory file.
+#    ```ini
+#    [cisco_routers]
+#    router1 ansible_host=192.168.1.10 ansible_network_os=cisco.ios.ios
+#    router2 ansible_host=192.168.1.11 ansible_network_os=cisco.ios.ios
+#
+#    [juniper_switches]
+#    switch1 ansible_host=192.168.1.20 ansible_network_os=junipernetworks.junos.junos
+#    ```
+# The pre_task in this playbook provides a basic dynamic assignment based on the first group name,
+# which is a simplification. For production, explicit definition in inventory or group_vars is recommended.
+
+# Ensure you have the necessary collections installed:
+# ansible-galaxy collection install ansible.netcommon
+# ansible-galaxy collection install cisco.ios
+# ansible-galaxy collection install junipernetworks.junos
+# ansible-galaxy collection install ansible.utils (for certain filters/plugins if used)

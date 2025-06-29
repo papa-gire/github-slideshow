@@ -1,0 +1,45 @@
+---
+# Specific variables for junos_switch1.example.com (Juniper Junos)
+# These variables will define the interface configurations for the template in roles/configure_device/templates/interface_config.j2
+
+interfaces:
+  - name: ge-0/0/0 # Adjust interface names based on your device
+    description: "Uplink to Core Switch"
+    ip_address: 10.20.20.1
+    subnet_mask: "30" # Can be prefix length; template's ipaddr filter handles it
+    state: "no shutdown" # "no shutdown" or "shutdown"
+  - name: ge-0/0/1
+    description: "Access Port for Users VLAN 100"
+    # This basic template primarily sets description and IP.
+    # For full switchport config (e.g., family ethernet-switching, vlan members),
+    # you would typically expand the template or use dedicated Junos modules like `junipernetworks.junos.junos_l2_interfaces`.
+    # For now, this will just set description. If IP is added, it implies L3.
+    state: "no shutdown"
+  - name: lo0 # Junos loopback typically lo0.0 for unit
+    description: "Router ID / Management Interface"
+    # For Junos, you usually configure the unit, e.g., lo0.0
+    # The template currently configures unit 0 by default for physical interfaces.
+    # For loopback, you'd often do:
+    # set interfaces lo0 unit 0 family inet address 2.2.2.2/32
+    # Adjust template or use specific tasks if needed.
+    # The current template will attempt:
+    # set interfaces lo0 unit 0 family inet address 2.2.2.2/32 (if ip_address and subnet_mask are given)
+    ip_address: 2.2.2.2
+    subnet_mask: "32"
+    state: "no shutdown"
+
+
+# Add other host-specific variables here, for example:
+# ntp_servers:
+#   - "132.163.97.1"
+#   - "132.163.97.2"
+# syslog_host: "192.168.200.250"
+
+# These variables can be used in your role tasks and templates.
+# For example, in a task using junipernetworks.junos.junos_config:
+# - name: Configure NTP servers for Junos
+#   junipernetworks.junos.junos_config:
+#     lines:
+#       - set system ntp server {{ item }}
+#   loop: "{{ ntp_servers }}"
+#   when: ntp_servers is defined and ansible_network_os == 'junipernetworks.junos.junos'

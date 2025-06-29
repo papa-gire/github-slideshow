@@ -1,0 +1,36 @@
+{# Jinja2 template for interface configurations #}
+{% if hostvars[inventory_hostname].interfaces is defined %}
+{% for interface in hostvars[inventory_hostname].interfaces %}
+{% if ansible_network_os == 'cisco.ios.ios' %}
+interface {{ interface.name }}
+ {% if interface.description is defined %}
+  description {{ interface.description }}
+ {% endif %}
+ {% if interface.ip_address is defined and interface.subnet_mask is defined %}
+  ip address {{ interface.ip_address }} {{ interface.subnet_mask }}
+ {% endif %}
+ {% if interface.speed is defined %}
+  speed {{ interface.speed }}
+ {% endif %}
+ {% if interface.duplex is defined %}
+  duplex {{ interface.duplex }}
+ {% endif %}
+ {% if interface.state == 'shutdown' %}
+  shutdown
+ {% elif interface.state == 'no shutdown' %}
+  no shutdown
+ {% endif %}
+!
+{% elif ansible_network_os == 'junipernetworks.junos.junos' %}
+set interfaces {{ interface.name }} unit 0 description "{{ interface.description | default('') }}"
+{% if interface.ip_address is defined and interface.subnet_mask is defined %}
+set interfaces {{ interface.name }} unit 0 family inet address {{ interface.ip_address }}/{{ interface.subnet_mask | ipaddr('prefix') }}
+{% endif %}
+{% if interface.state == 'shutdown' %}
+set interfaces {{ interface.name }} disable
+{% elif interface.state == 'no shutdown' %}
+delete interfaces {{ interface.name }} disable
+{% endif %}
+{% endif %}
+{% endfor %}
+{% endif %}

@@ -1,0 +1,55 @@
+---
+# Tasks for device backup will go here
+- name: Create backup directory if it doesn't exist
+  ansible.builtin.file:
+    path: "{{ backup_dir }}/{{ inventory_hostname }}"
+    state: directory
+  delegate_to: localhost
+  run_once: true # Avoids trying to create per host if backup_dir is shared
+
+- name: Ensure backup directory for specific host exists
+  ansible.builtin.file:
+    path: "{{ backup_dir }}/{{ inventory_hostname }}"
+    state: directory
+  delegate_to: localhost
+
+- name: Backup Cisco IOS configuration
+  cisco.ios.ios_command:
+    commands:
+      - show running-config
+  register: ios_config_output
+  when: ansible_network_os == 'cisco.ios.ios'
+
+- name: Save Cisco IOS configuration to file
+  ansible.builtin.copy:
+    content: "{{ ios_config_output.stdout[0] }}"
+    dest: "{{ backup_dir }}/{{ inventory_hostname }}/{{ inventory_hostname }}_running_config_{{ ansible_date_time.date }}.txt"
+  delegate_to: localhost
+  when: ansible_network_os == 'cisco.ios.ios' and ios_config_output.stdout is defined
+
+- name: Backup Juniper Junos configuration
+  junipernetworks.junos.junos_command:
+    commands:
+      - show configuration | display set
+  register: junos_config_output
+  when: ansible_network_os == 'junipernetworks.junos.junos'
+
+- name: Save Juniper Junos configuration to file
+  ansible.builtin.copy:
+    content: "{{ junos_config_output.stdout[0] }}"
+    dest: "{{ backup_dir }}/{{ inventory_hostname }}/{{ inventory_hostname }}_config_{{ ansible_date_time.date }}.set"
+  delegate_to: localhost
+  when: ansible_network_os == 'junipernetworks.junos.junos' and junos_config_output.stdout is defined
+
+- name: Generic configuration backup using netcommon (example, may need adjustment)
+  ansible.netcommon.net_backup:
+    dest: "{{ backup_dir }}/{{ inventory_hostname }}/{{ inventory_hostname }}_config_backup_{{ ansible_date_time.date }}.txt"
+  when: ansible_network_os not in ['cisco.ios.ios', 'junipernetworks.junos.junos'] # Example condition
+  # Note: net_backup module behavior and support can vary by platform.
+  # It often relies on underlying platform-specific modules or capabilities.
+  # You might need to install additional collections like `ansible.utils` for it to work or have more options.
+
+- name: Display backup location
+  ansible.builtin.debug:
+    msg: "Configuration for {{ inventory_hostname }} backed up to {{ backup_dir }}/{{ inventory_hostname }}/"
+  delegate_to: localhost

@@ -1,0 +1,46 @@
+---
+# Group variables for all Cisco devices
+# These settings will apply to any host in a group named 'cisco_devices'
+# or any group that is a child of 'cisco_devices' (e.g., cisco_routers, cisco_switches).
+
+ansible_network_os: cisco.ios.ios
+ansible_user: cisco_user # Replace with your default SSH username for Cisco devices
+# ansible_password: "your_cisco_password" # Strongly recommend using Ansible Vault for this!
+# Example with vault:
+ansible_password: "{{ vault_cisco_password | default('fallback_password_if_not_in_vault') }}"
+
+
+ansible_connection: ansible.netcommon.network_cli # Default connection type for Cisco CLI
+
+# Enable mode (privileged EXEC mode) settings
+ansible_become: true
+ansible_become_method: enable
+# ansible_become_password: "your_enable_password" # Use Vault if set and different from login
+# Example with vault:
+ansible_become_password: "{{ vault_cisco_enable_password | default(vault_cisco_password) | default('fallback_enable_password') }}"
+
+
+# You can define other common variables for your Cisco devices here,
+# for example, default NTP servers, SNMP settings, etc.
+# default_ntp_servers:
+#   - 1.2.3.4
+#   - 5.6.7.8
+# default_snmp_community: "public_ro"
+
+# To use vault variables like `vault_cisco_password`:
+# 1. Create a vault file: `ansible-vault create group_vars/cisco_vault.yml`
+#    Inside, define:
+#    vault_cisco_password: "your_actual_cisco_password"
+#    vault_cisco_enable_password: "your_actual_enable_password"
+# 2. When running the playbook, provide the vault password:
+#    `ansible-playbook -i inventory.ini playbook.yml --ask-vault-pass`
+#    Or set ANSIBLE_VAULT_PASSWORD_FILE environment variable.
+# 3. Ensure this group_vars/cisco_devices.yml file can access those vault variables,
+#    often by including the vault file or defining them directly if the file itself is vaulted.
+#    If this file (cisco_devices.yml) is NOT vaulted, then the `ansible_password` lines
+#    will try to use a variable named `vault_cisco_password` that must be defined elsewhere
+#    (e.g. in a vaulted file that is automatically loaded, or passed as extra vars).
+#    A common practice is to have a `group_vars/all/vault.yml` (encrypted) with all secrets.
+
+# The `default()` filter provides a fallback if the vault variable isn't found,
+# which is useful for testing but should be secured for production.

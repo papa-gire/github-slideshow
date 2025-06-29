@@ -1,0 +1,37 @@
+---
+# Specific variables for router1.example.com (Cisco IOS)
+# These variables will define the interface configurations for the template in roles/configure_device/templates/interface_config.j2
+
+interfaces:
+  - name: GigabitEthernet0/0 # Adjust interface names based on your device
+    description: "Uplink to Core Network"
+    ip_address: 10.10.10.1
+    subnet_mask: 255.255.255.252
+    state: "no shutdown" # "no shutdown" or "shutdown"
+    # speed: auto # Optional
+    # duplex: auto # Optional
+  - name: GigabitEthernet0/1
+    description: "LAN Segment A"
+    ip_address: 192.168.100.1
+    subnet_mask: 255.255.255.0
+    state: "no shutdown"
+  - name: Loopback0
+    description: "Router ID / Management Interface"
+    ip_address: 1.1.1.1
+    subnet_mask: 255.255.255.255
+    state: "no shutdown"
+
+# Add other host-specific variables here, for example:
+# ntp_servers:
+#   - 132.163.96.1
+#   - 132.163.96.2
+# syslog_server: 192.168.100.250
+
+# These variables can be used in your role tasks and templates.
+# For example, in a task:
+# - name: Configure NTP servers
+#   cisco.ios.ios_config:
+#     lines:
+#       - ntp server {{ item }}
+#   loop: "{{ ntp_servers }}"
+#   when: ntp_servers is defined

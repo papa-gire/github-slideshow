@@ -1,0 +1,56 @@
+---
+# Tasks for device configuration will go here
+- name: Apply base configuration
+  cisco.ios.ios_config:
+    lines:
+      - hostname {{ inventory_hostname }}
+      # Add other generic configurations applicable to most devices
+    match: exact
+  when: ansible_network_os == 'cisco.ios.ios'
+
+- name: Apply base configuration for Junos
+  junipernetworks.junos.junos_config:
+    lines:
+      - set system host-name {{ inventory_hostname }}
+      # Add other generic configurations applicable to most Junos devices
+    match: exact
+  when: ansible_network_os == 'junipernetworks.junos.junos'
+
+- name: Apply interface configurations from template
+  ansible.builtin.template:
+    src: interface_config.j2
+    dest: "{{ build_dir }}/{{ inventory_hostname }}_interfaces.conf"
+  delegate_to: localhost
+  changed_when: false # This task just generates a file, doesn't change remote device
+
+- name: Push interface configurations to Cisco IOS device
+  cisco.ios.ios_config:
+    src: "{{ build_dir }}/{{ inventory_hostname }}_interfaces.conf"
+  when: ansible_network_os == 'cisco.ios.ios'
+
+- name: Push interface configurations to Juniper Junos device
+  junipernetworks.junos.junos_config:
+    src: "{{ build_dir }}/{{ inventory_hostname }}_interfaces.conf"
+    config_mode: "exclusive" # or "private" depending on needs
+  when: ansible_network_os == 'junipernetworks.junos.junos'
+
+# Add more tasks for specific configurations (e.g., VLANs, routing protocols)
+# You can use platform-specific modules or generic ones like `ansible.netcommon.net_config`
+# For example, to configure VLANs on a Cisco IOS device:
+# - name: Configure VLANs on Cisco IOS
+#   cisco.ios.ios_vlans:
+#     config:
+#       - vlan_id: 10
+#         name: USERS
+#       - vlan_id: 20
+#         name: SERVERS
+#     state: merged # or replaced, overridden, deleted
+#   when: ansible_network_os == 'cisco.ios.ios'
+
+# For example, to configure VLANs on a Juniper Junos device (using junos_config):
+# - name: Configure VLANs on Juniper Junos
+#   junipernetworks.junos.junos_config:
+#     lines:
+#       - set vlans USERS vlan-id 10
+#       - set vlans SERVERS vlan-id 20
+#   when: ansible_network_os == 'junipernetworks.junos.junos'

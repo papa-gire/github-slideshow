@@ -1,0 +1,38 @@
+---
+# Group variables for all Juniper devices
+# These settings will apply to any host in a group named 'juniper_devices'
+# or any group that is a child of 'juniper_devices' (e.g., juniper_switches).
+
+ansible_network_os: junipernetworks.junos.junos
+ansible_user: juniper_user # Replace with your default SSH username for Juniper devices
+# ansible_password: "your_juniper_password" # Strongly recommend using Ansible Vault for this!
+# Example with vault:
+ansible_password: "{{ vault_juniper_password | default('fallback_password_if_not_in_vault') }}"
+
+ansible_connection: ansible.netcommon.network_cli # Default connection type for Junos CLI
+# Alternatively, for NETCONF connection with Junos:
+# ansible_connection: ansible.netcommon.netconf
+# If using NETCONF, ensure the device is configured for NETCONF over SSH.
+
+# Juniper devices do not use an 'enable' mode like Cisco.
+# Privileges are typically determined by the user's class/permissions on the Junos device.
+# So, `ansible_become`, `ansible_become_method`, `ansible_become_password` are usually not needed
+# unless you are using a specific scenario that requires privilege escalation via a command.
+
+# You can define other common variables for your Juniper devices here,
+# for example, default NTP servers, SNMP settings, etc.
+# default_junos_ntp_servers:
+#   - 1.2.3.5
+#   - 5.6.7.9
+# default_junos_snmp_community: "public_j_ro"
+
+# To use vault variables like `vault_juniper_password`:
+# 1. Create/edit a vault file: `ansible-vault edit group_vars/juniper_vault.yml` (or a common vault file)
+#    Inside, define:
+#    vault_juniper_password: "your_actual_juniper_password"
+# 2. When running the playbook, provide the vault password:
+#    `ansible-playbook -i inventory.ini playbook.yml --ask-vault-pass`
+#    Or set ANSIBLE_VAULT_PASSWORD_FILE environment variable.
+
+# The `default()` filter provides a fallback if the vault variable isn't found,
+# useful for testing but should be secured for production.
